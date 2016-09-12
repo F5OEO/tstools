@@ -93,7 +93,7 @@ typedef struct _ts_pcr_buffer *TS_pcr_buffer_p;
 
 // ------------------------------------------------------------
 // The number of TS packets to read ahead
-#define TS_READ_AHEAD_COUNT 1024        // aim for multiple of block boundary -- used to be 50
+#define TS_READ_AHEAD_COUNT 7        // aim for multiple of block boundary -- used to be 50
 // Thus the number of bytes to read ahead
 #define TS_READ_AHEAD_BYTES  TS_READ_AHEAD_COUNT*TS_PACKET_SIZE
 

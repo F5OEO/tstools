@@ -2474,7 +2474,7 @@ extern int calc_mpeg1_pes_offset(byte  *data, int data_len)
  *
  * - `packet` is the PES packet datastructure
  */
-static inline void setup_PES_as_ES(PES_packet_data_p  packet)
+extern  void setup_PES_as_ES(PES_packet_data_p  packet)
 {
   byte  stream_id;
   int   offset;

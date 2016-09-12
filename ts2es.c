@@ -88,7 +88,8 @@ static int extract_av_via_pes(char  *input_name,
     return 1;
   }
   
-  err = open_PES_reader(input_name,!quiet,!quiet,&reader);
+  //err = open_PES_reader(input_name,!quiet,!quiet,&reader);
+  err= open_PES_reader_for_TS(input_name,0,!quiet,!quiet,&reader);
   if (err)
   {
     fprint_err("### Error opening file %s\n",input_name);
@@ -97,9 +98,11 @@ static int extract_av_via_pes(char  *input_name,
   }
 
   set_PES_reader_video_only(reader,TRUE);
+ 
 
+ 
   // Wrap our PES stream up as an ES stream
-  err = build_elementary_stream_PES(reader,&es);
+/*  err = build_elementary_stream_PES(reader,&es);
   if (err)
   {
     print_err("### Error trying to build ES reader from PES reader\n");
@@ -107,11 +110,17 @@ static int extract_av_via_pes(char  *input_name,
     (void) fclose(output);
     return 1;
   }
+*/
 
   for (;;)
   {
-    ES_unit_p  unit;
-    err = find_and_build_next_ES_unit(es,&unit);
+    PES_packet_data_p  packet;
+    err= read_next_PES_packet(reader);
+    
+   
+    //ES_unit_p  unit;
+    //err = find_and_build_next_ES_unit(&reader);
+    print_err("*");
     if (err == EOF)
       break;
     else if (err)
@@ -119,11 +128,26 @@ static int extract_av_via_pes(char  *input_name,
       print_err("### Error reading next ES unit\n");
       (void) fclose(output);
       (void) close_PES_reader(&reader);
-      close_elementary_stream(&es);
+      
       return 1;
     }
-    err = write_ES_unit(output,unit);
-    if (err)
+    packet = reader->packet;
+   if(packet->has_PTS==1)
+  {
+    int GotPts;
+  uint64_t pts;
+  find_PTS_in_PES(packet->data,
+                           packet->data_len,
+                           &GotPts,
+                           &pts);
+      printf("PTS = %llu\n",pts);
+    
+  }  
+
+  setup_PES_as_ES(packet);
+     int written = fwrite(packet->es_data,packet->es_data_len,1,output);
+    //err = write_ES_unit(output,unit);
+    /*if (err)
     {
       print_err("### Error writing ES unit out to file\n");
       free_ES_unit(&unit);
@@ -131,10 +155,10 @@ static int extract_av_via_pes(char  *input_name,
       (void) close_PES_reader(&reader);
       close_elementary_stream(&es);
       return 1;
-    }
-    free_ES_unit(&unit);
+    }*/
+    //free_ES_unit(&unit);
   }
-
+  
   (void) fclose(output);              // naughtily ignore the return code
   (void) close_PES_reader(&reader);   // naughtily ignore the return code
   close_elementary_stream(&es);
@@ -234,6 +258,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
         }
         data = &payload[offset];
         data_len = payload_len-offset;
+      
         if (verbose) print_data(TRUE,"data",data,data_len,1000);
       }
       else
@@ -251,6 +276,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
 
         if (got_pes_packet_len)
         {
+          
           // Try not to write more data than the PES packet declares
           if (data_len > pes_packet_len)
           {
@@ -265,7 +291,10 @@ static int extract_pid_packets(TS_reader_p  tsreader,
       if (data_len > 0)
       {
         // Windows doesn't seem to like writing 0 bytes, so be careful...
+        //printf("ES=%d\n",data_len);
         written = fwrite(data,data_len,1,output);
+        fflush(output);
+        
         if (written != 1)
         {
           fprint_err("### Error writing TS packet - units written = %d\n",
@@ -603,11 +632,11 @@ int main(int argc, char **argv)
     print_err("### ts2es: -stdout is not supported with -pes\n");
     return 1;
   }
-  if (use_pes && use_stdin)
+  /*if (use_pes && use_stdin)
   {
     print_err("### ts2es: -stdin is not supported with -pes\n");
     return 1;
-  }
+  }*/
   if (use_pes)
   {
     err = extract_av_via_pes(input_name,output_name,(extract==EXTRACT_VIDEO),

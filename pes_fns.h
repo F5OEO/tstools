@@ -32,6 +32,9 @@
 #include "pes_defns.h"
 #include "es_defns.h"
 
+
+extern void setup_PES_as_ES(PES_packet_data_p  packet);
+
 /*
  * Free a PES packet datastructure
  *
